@@ -2,7 +2,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: Site Foundation** - El sitio Docusaurus 3 funciona en la intranet con navegación completa en español
+- [x] **Phase 1: Site Foundation** - El sitio Docusaurus 3 funciona en la intranet con navegación completa en español
 - [ ] **Phase 2: Content Architecture** - La arquitectura de contenido está definida — catálogo curado, glosario, guía de autoría, índice de ejercicios y panel de conexión
 - [ ] **Phase 3: Writeup Production & Polish** - Los writeups del subconjunto curado están completos con plantilla estructurada, badges de dificultad, código resaltado y convenciones pedagógicas
 
@@ -57,6 +57,6 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Site Foundation | 0/0 | Not started | - |
+| 1. Site Foundation | 7/7 | Complete | 2026-05-20 |
 | 2. Content Architecture | 0/0 | Not started | - |
 | 3. Writeup Production & Polish | 0/0 | Not started | - |
