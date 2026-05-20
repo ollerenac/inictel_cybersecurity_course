@@ -12,11 +12,11 @@ const config = {
   },
 
   // Updated when GitHub repo is created
-  url: 'https://your-github-username.github.io',
-  baseUrl: '/ciberwar-curso/',
+  url: 'https://ollerenac.github.io',
+  baseUrl: '/inictel_cybersecurity_course/',
 
-  organizationName: 'your-github-username',
-  projectName: 'ciberwar-curso',
+  organizationName: 'ollerenac',
+  projectName: 'inictel_cybersecurity_course',
   trailingSlash: false,
 
   onBrokenLinks: 'throw',
