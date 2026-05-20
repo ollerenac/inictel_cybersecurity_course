@@ -67,11 +67,31 @@
 
 ## Traceability
 
-*Filled in by roadmapper.*
-
-| Requirement | Phase |
-|-------------|-------|
-| (pending)   |       |
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| INFRA-01 | Phase 1 — Site Foundation | Pending |
+| INFRA-02 | Phase 1 — Site Foundation | Pending |
+| INFRA-03 | Phase 1 — Site Foundation | Pending |
+| NAV-01 | Phase 1 — Site Foundation | Pending |
+| NAV-02 | Phase 1 — Site Foundation | Pending |
+| NAV-03 | Phase 1 — Site Foundation | Pending |
+| NAV-04 | Phase 1 — Site Foundation | Pending |
+| CONTENT-01 | Phase 2 — Content Architecture | Pending |
+| CONTENT-02 | Phase 2 — Content Architecture | Pending |
+| CONTENT-03 | Phase 2 — Content Architecture | Pending |
+| CONTENT-04 | Phase 2 — Content Architecture | Pending |
+| HOME-01 | Phase 2 — Content Architecture | Pending |
+| HOME-02 | Phase 2 — Content Architecture | Pending |
+| HOME-03 | Phase 2 — Content Architecture | Pending |
+| HOME-04 | Phase 2 — Content Architecture | Pending |
+| EXERCISE-01 | Phase 3 — Writeup Production & Polish | Pending |
+| EXERCISE-02 | Phase 3 — Writeup Production & Polish | Pending |
+| EXERCISE-03 | Phase 3 — Writeup Production & Polish | Pending |
+| EXERCISE-04 | Phase 3 — Writeup Production & Polish | Pending |
+| WRITEUP-01 | Phase 3 — Writeup Production & Polish | Pending |
+| WRITEUP-02 | Phase 3 — Writeup Production & Polish | Pending |
+| WRITEUP-03 | Phase 3 — Writeup Production & Polish | Pending |
+| WRITEUP-04 | Phase 3 — Writeup Production & Polish | Pending |
 
 ---
 
