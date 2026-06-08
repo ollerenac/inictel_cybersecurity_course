@@ -46,6 +46,7 @@ const sidebars = {
       label: '🦠 Malware',
       items: [
         'malware/malware-intro',
+        'malware/dll-injection',
       ],
     },
     {
