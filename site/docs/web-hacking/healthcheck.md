@@ -489,7 +489,7 @@ PING 192.168.200.200 (192.168.200.200) 56(84) bytes of data.
 ```
 
 Esto **no es SSRF** — el servidor no descargó una página, ejecutó `ping` contra el host de
-la URL. La aplicación es un envoltorio de `ping`. Dos pruebas más afinan el modelo:
+la URL. La aplicación es un wrapper de `ping`. Dos pruebas más afinan el modelo:
 
 ```bash
 curl -s "http://192.168.200.100:3000/send?url=file:///etc/passwd"   # -> "Invalid"
@@ -631,7 +631,7 @@ usaremos contra Healthcheck.
 En Python, la diferencia entre seguro e inseguro es una sola flag:
 
 ```python
-# VULNERABLE — shell=True interpreta la cadena completa como un comando de shell
+# VULNERABLE — shell=True interpreta el string completo como un comando de shell
 command = f"ping {host} -c 1"
 subprocess.Popen(command, shell=True)
 
@@ -640,7 +640,7 @@ subprocess.Popen(command, shell=True)
 subprocess.Popen(["ping", host, "-c", "1"])
 ```
 
-Con `shell=True`, la cadena `ping 8.8.8.8;id -c 1` se ejecuta a través de `/bin/sh -c`, que
+Con `shell=True`, el string `ping 8.8.8.8;id -c 1` se ejecuta a través de `/bin/sh -c`, que
 ve el `;` como separador de comandos y corre `id`. Con `shell=False` y una lista, `host`
 vale literalmente `8.8.8.8;id` — un nombre de host inválido, no un comando.
 
@@ -679,6 +679,34 @@ Tres fallos encadenados:
    ninguna validación**. El atacante simplemente elige `http://` en vez de `https://`.
 3. **Ejecución con `shell=True`.** El host no validado se interpola en `ping {host} -c 1`
    y se pasa a un shell.
+
+<details>
+<summary>🔍 ¿Qué es una <em>allowlist</em>? (y por qué la de este código era correcta)</summary>
+
+Una **allowlist** (lista blanca / lista de permitidos) es un enfoque de validación donde
+defines **exactamente lo que SÍ se permite** y rechazas **todo lo demás** por defecto. Su
+opuesto es la **blocklist** (lista negra): enumeras lo prohibido y dejas pasar el resto.
+
+El `is_safe_input` de este código usa una allowlist:
+
+```python
+re.compile(r'^[a-zA-Z0-9_\-\.]+$')   # solo letras, dígitos, _  -  .
+```
+
+Con `^…$`, la entrada **entera** debe estar formada *solo* por letras, dígitos, `_`, `-` y `.`.
+Si aparece **cualquier otra cosa** (`;`, espacio, `/`, `$`, `|`…) → no cumple → rechazada.
+
+| | Cómo funciona | Problema |
+|---|---|---|
+| **blocklist** | "prohíbe `;`, `\|`, `&`…" y permite el resto | Frágil: siempre olvidas un metacarácter (`` ` ``, `$()`, `\n`…) |
+| **allowlist** | "permite solo letras/dígitos" y prohíbe el resto | Robusto: lo no permitido explícitamente, se bloquea |
+
+Aquí está la ironía del reto: **la validación estaba bien hecha.** Una allowlist estricta es
+justo lo recomendado, y de hecho bloquea `;`, espacios, `$()`, todo — de una. El fallo no fue
+*cómo* validaba, sino **dónde**: solo en la rama `https://`. Una defensa correcta, puesta en el
+único camino que el atacante no usa.
+
+</details>
 
 La única barrera que sobrevive es la del propio regex: el host se captura como `[^/]+`, así
 que **no puede contener el carácter `/`**. Es la restricción con la que hay que convivir.
@@ -834,6 +862,21 @@ El comando que corrió en el servidor fue `ping ;id;pwd;ls; -c 1`:
 - `pwd` → el directorio de trabajo es **`/app`**.
 - `ls` → el directorio contiene un archivo llamado **`flag`**.
 - ` -c 1` → sobra al final → `-c: not found` (inofensivo).
+
+:::note[¿Sobre qué directorio corre `ls`? — el *cwd*]
+
+Nunca le pasamos una ruta a `ls`, así que lista el **directorio de trabajo actual** (*cwd*, el
+directorio donde el proceso "está parado"). ¿Cuál es? Lo dice el `pwd` de la línea anterior:
+**`/app`**. Por eso el orden `id;pwd;ls` no es casual — `pwd` responde *dónde estás* y `ls`
+*qué hay ahí*.
+
+El cwd es `/app` porque la app Flask se ejecuta desde ahí (donde vive `app.py`). Nuestros
+comandos inyectados **heredan el cwd del proceso que los ejecuta** — el servidor web —; no
+arrancan en `/`. Y esto es un regalo para el exploit: como el `flag` está en el cwd, lo leeremos
+con nombre **relativo** (`cat flag`), **sin `/`** — justo lo que exige la restricción `[^/]+`.
+Si estuviera en `/root/flag`, tendríamos que fabricar la `/` con `${PATH:0:1}`.
+
+:::
 
 ### Paso 3 — Leer el flag
 
