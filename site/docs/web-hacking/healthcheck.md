@@ -29,6 +29,55 @@ tags: [avanzado, web-hacking, command-injection, rce, analisis-de-codigo]
 
 ---
 
+## Escenario
+
+Un CTF suele soltarte en medio de la acción sin decirte cómo llegaste ahí. Antes de tocar
+comandos, vale la pena situar este ejercicio en una historia realista — porque el valor no
+está solo en capturar el flag, sino en entender **en qué momento de un ataque real harías
+esto**.
+
+Imagina una empresa cualquiera. Un empleado abre un adjunto de un correo de *phishing* y, sin
+saberlo, le da al atacante una sesión en su equipo: la **máquina de trabajo `192.168.200.51`**,
+un host Linux dentro de la red interna. El atacante ya está *dentro*, pero en un rincón sin
+valor: una workstation de usuario. Su objetivo real —servidores, datos, credenciales— está más
+adentro. Lo que hará desde aquí es **reconocimiento interno** y **movimiento lateral**: mirar
+qué otros hosts alcanza, qué servicios corren, y cuál de ellos tiene una grieta que lo lleve
+más lejos.
+
+**Ahí es donde tomamos el hilo de este CTF: ya tenemos ese punto de apoyo (*foothold*) en la
+workstation, y desde él pivotaremos.** El *ping sweep*, el escaneo de puertos y todo lo que
+sigue es, exactamente, lo que un adversario haría en la fase de *Actions on Objectives* de la
+cadena de ataque:
+
+```
+   FASES 1–6  ·  fuera del alcance del CTF            FASE 7  ·  aquí empezamos
+ ┌────────────────────────────────────────────┐    ┌──────────────────────────────┐
+ │ 1 Reconnaissance  →  2 Weaponization        │    │ 7 Actions on Objectives      │
+ │ 3 Delivery        →  4 Exploitation         │ ═▶ │   🎯 foothold en .51          │
+ │ 5 Installation    →  6 Command & Control    │    │   recon interno · lateral ·  │
+ │                                             │    │   escalar hacia el objetivo  │
+ └────────────────────────────────────────────┘    └──────────────────────────────┘
+    cómo el atacante llegó a la workstation            lo que hace desde ella
+                                                       ── este CTF ──
+```
+
+Las fases 1 a 6 de la **Cyber Kill Chain** (el modelo de Lockheed Martin: `Reconnaissance →
+Weaponization → Delivery → Exploitation → Installation → Command & Control`) ya ocurrieron: así
+llegó el atacante a la workstation. Nosotros arrancamos en la fase 7, **Actions on Objectives**,
+con la workstation como base de operaciones.
+
+:::note[Escenario representativo, no un incidente real]
+
+La historia del phishing es un marco pedagógico para darle contexto operativo al ejercicio —
+no un ataque documentado concreto. Pero las técnicas sí son reales y están catalogadas en
+**MITRE ATT&CK**: el recon interno, el movimiento lateral y —lo que explotaremos más
+adelante— la ejecución de comandos vía una app vulnerable (`T1059 — Command and Scripting
+Interpreter`). El escenario es ficticio; los TTPs, no.
+
+:::
+
+---
+
 ## Reconocimiento
 
 ### Paso 0 — Descubrir la red
@@ -55,6 +104,38 @@ cat hosts.txt
 - `192.168.200.51` — nuestra propia máquina de trabajo.
 - `192.168.200.100` y `192.168.200.200` — los dos candidatos.
 
+<details>
+<summary>🔍 Explica el comando — <code>ping sweep</code> en paralelo</summary>
+
+```bash
+seq 1 254 | xargs -P64 -I{} sh -c 'ping -c1 -W1 192.168.200.{} >/dev/null 2>&1 && echo 192.168.200.{}' | sort -t. -k4 -n > hosts.txt
+```
+
+Se lee de izquierda a derecha, pieza por pieza:
+
+| Pieza | Qué hace |
+|-------|----------|
+| `seq 1 254` | Genera los números `1`…`254` (uno por línea): los últimos octetos de la `/24`. |
+| <code>&#124;</code> | El *pipe* pasa esa lista de números a la entrada del siguiente comando. |
+| `xargs -P64` | Toma cada línea de entrada y ejecuta un comando con ella; `-P64` corre **64 en paralelo**. |
+| `-I{}` | Define `{}` como el hueco donde `xargs` inserta cada número. |
+| `sh -c '…'` | Cada invocación abre un mini-shell para correr el `ping` con ese octeto. |
+| `ping -c1 -W1` | **Un** paquete (`-c1`), esperando **máximo 1 s** (`-W1`). Sin límites, 254 pings colgados tardarían minutos. |
+| `>/dev/null 2>&1` | Descarta la salida del `ping` (no nos interesa el detalle, solo si respondió). |
+| `&& echo …` | El `&&` solo ejecuta el `echo` **si el `ping` tuvo éxito** → imprime la IP únicamente de los hosts vivos. |
+| <code>&#124; sort -t. -k4 -n</code> | Ordena por el **4.º campo** (`-k4`) usando `.` como separador (`-t.`), numéricamente (`-n`) → IPs en orden. |
+| `> hosts.txt` | Guarda el resultado en un archivo para **reutilizarlo** en el escaneo de puertos. |
+
+**La intuición (el patrón que se repite):** *generar candidatos → paralelizar → quedarse solo
+con los que responden → ordenar*. Casi todo el recon con one-liners sigue esta forma. `xargs -P`
+es el motor: convierte un bucle secuencial lento en un abanico paralelo.
+
+**Ejercicio de refuerzo:** ¿cómo adaptarías el comando para barrer la red `10.10.5.0/24`? ¿Y
+si quisieras el doble de velocidad — qué número cambias, y qué riesgo tiene subirlo demasiado?
+(Pista: más paralelismo = más carga en tu propia máquina y más "ruido" en la red).
+
+</details>
+
 **Puertos abiertos** — escaneamos cada host descubierto (leyendo `hosts.txt`) con `/dev/tcp`
 de bash, sin instalar nada:
 
@@ -72,6 +153,46 @@ done < hosts.txt | sort -t: -k1,1 -k2,2n
 192.168.200.200:80
 ```
 
+<details>
+<summary>🔍 Explica el comando — escaneo de puertos con <code>/dev/tcp</code></summary>
+
+```bash
+while read -r h; do
+  seq 1 10000 | xargs -P200 -I{} bash -c "timeout 1 bash -c 'echo >/dev/tcp/$h/{}' 2>/dev/null && echo $h:{}"
+done < hosts.txt | sort -t: -k1,1 -k2,2n
+```
+
+| Pieza | Qué hace |
+|-------|----------|
+| `while read -r h; … done < hosts.txt` | Recorre el archivo **línea por línea**: cada `h` es una de las IPs vivas que descubrimos. Reutiliza el trabajo del paso anterior en vez de re-escribir las IPs a mano. |
+| `seq 1 10000` | Genera los puertos `1`…`10000` a probar en cada host. |
+| `xargs -P200 -I{}` | Prueba **200 puertos en paralelo** (`{}` = cada número de puerto). |
+| `echo >/dev/tcp/$h/{}` | **El truco clave.** `/dev/tcp/HOST/PUERTO` es un pseudo-archivo de **bash**: abrirlo *intenta una conexión TCP*. Si el puerto está abierto, tiene éxito; si está cerrado, falla. |
+| `timeout 1` | Corta el intento tras 1 s — sin esto, cada puerto cerrado se quedaría colgado esperando. |
+| `2>/dev/null && echo $h:{}` | Silencia los errores de los puertos cerrados; el `&&` imprime `IP:puerto` **solo si la conexión abrió**. |
+| `sort -t: -k1,1 -k2,2n` | Ordena por IP (`-k1`) y luego por puerto numérico (`-k2n`), usando `:` como separador. |
+
+**Por qué `bash -c` y no `sh -c`:** `/dev/tcp` **es una característica de bash**, no existe en
+`sh` ni en POSIX. Si el escaneo corriera bajo `sh`, `/dev/tcp` sería un archivo inexistente y
+todo fallaría. Por eso el comando envuelve explícitamente el intento en `bash -c`.
+
+**El patrón, otra vez:** *tomar la lista del paso anterior → generar candidatos (puertos) →
+paralelizar → quedarse con los que responden → ordenar*. Es el mismo esqueleto que el ping
+sweep; solo cambia qué "abre" el candidato (aquí, una conexión TCP en vez de un `ping`).
+
+:::tip[Con `nmap` instalado es más simple]
+`nmap -p- --min-rate 2000 -iL hosts.txt` hace lo mismo (`-iL` lee los hosts del archivo).
+Ojo: **el puerto 3000 no está en el top-1000 que nmap escanea por defecto** — un `nmap 192.168.200.100`
+a secas *se perdería la app*. Por eso barremos el rango completo (`-p-` o `seq 1 10000`), nunca
+solo los puertos comunes. La versión con `/dev/tcp` sirve cuando no puedes instalar nmap.
+:::
+
+**Ejercicio de refuerzo:** el `while read` recorre TODOS los hosts de `hosts.txt`, incluida
+nuestra propia máquina (`.51`). ¿Cómo excluirías tu propia IP del escaneo? (Pista: `grep -v`
+sobre `hosts.txt` antes del bucle).
+
+</details>
+
 - `192.168.200.2:53` — DNS del router, no es objetivo.
 - `192.168.200.51:22` y `:80` — nuestra propia máquina (SSH y un servidor local).
 - **`192.168.200.100:3000`** — un servicio web en un puerto **no estándar**: candidato principal.
@@ -79,25 +200,31 @@ done < hosts.txt | sort -t: -k1,1 -k2,2n
 
 Ahora sí tenemos, obtenidos por nosotros mismos, los dos objetivos: `100:3000` y `200:80`.
 
-:::note[Detalles del escaneo]
+**¿Por qué un puerto no estándar llama la atención?** Los servicios "normales" viven en puertos
+conocidos: web en 80/443, SSH en 22, DNS en 53. Un servicio en un puerto raro como **3000**
+significa que *alguien lo puso ahí a propósito* — y eso es interesante en los dos mundos:
 
-- **`xargs -P` en vez de `& … wait`.** `xargs -P64`/`-P200` paraleliza con la salida limpia;
-  un bucle con `… &` en shell interactiva funciona pero inunda la terminal con avisos de *job
-  control* (`[1] 6454`, `Exit 1`).
-- **`/dev/tcp/host/puerto` es de bash**, no de `sh` ni POSIX: abrir ese pseudo-archivo intenta
-  una conexión TCP; `timeout 1` corta los puertos cerrados. Por eso el escaneo va envuelto en
-  `bash -c`. Con `nmap` instalado, el equivalente es `nmap -p- --min-rate 2000 -iL hosts.txt`.
-- **El puerto 3000 no está en el top-1000 de nmap.** Un escaneo por defecto (`nmap 192.168.200.100`)
-  se perdería la app. Por eso barremos el rango completo (`-p-` o `seq 1 10000`), no solo los
-  puertos comunes.
-- Si un host sirviera HTTP pero **bloqueara ICMP**, el ping sweep no lo vería. Aquí ICMP está
-  permitido, así que el sweep basta como primer filtro.
+- **En un pentest real:** los puertos no estándar suelen alojar aplicaciones de desarrollo,
+  paneles internos o de administración, APIs improvisadas — software que a menudo está **menos
+  endurecido** que la web pública principal (sin WAF, con debug activado, sin revisar). Es
+  justo donde aparecen las grietas.
+- **En un CTF:** el servicio del reto casi siempre se despliega en un puerto llamativo. Un
+  `:3000` abierto es una señal directa de "el ejercicio vive aquí".
 
+En ambos casos la conclusión es la misma: un puerto abierto fuera de lo común **merece
+inspección prioritaria**.
+
+:::caution[Punto ciego del pipeline]
+Escaneamos puertos **solo** sobre los hosts que el ping sweep encontró (`hosts.txt`). Si un
+host sirviera HTTP pero **bloqueara ICMP**, el ping sweep no lo vería y nunca llegaríamos a
+escanear sus puertos. Aquí ICMP está permitido, pero en una red real conviene complementar con
+un barrido de puertos directo (sin depender del ping) sobre todo el rango.
 :::
 
-### Paso 1 — Huellar el stack
+### Paso 1 — Fingerprinting del stack
 
-Con los dos objetivos, identificamos qué corre en cada uno:
+*Fingerprinting* (tomar la "huella digital") es identificar qué software corre detrás de un
+servicio antes de atacarlo. Con los dos objetivos, averiguamos qué hay en cada uno:
 
 ```bash
 curl -sI http://192.168.200.100:3000/
@@ -109,10 +236,46 @@ Server: Werkzeug/3.1.3 Python/3.13.3
 Content-Type: text/html; charset=utf-8
 ```
 
-`Werkzeug` es el servidor de desarrollo de **Flask** — la aplicación es Python, no
-Node.js (un error fácil: el puerto 3000 es el default de Express, pero aquí no aplica). El
-stack decide todo el árbol de vectores: descartamos webshells `.php` y ponemos en el radar
-Jinja2 SSTI, la consola del debugger de Werkzeug y command injection.
+<details>
+<summary>🔍 Explica el comando — <code>curl -sI</code></summary>
+
+| Pieza | Qué hace |
+|-------|----------|
+| `curl` | Cliente HTTP de línea de comandos: hace peticiones y muestra la respuesta. |
+| `-s` | *Silent*: oculta la barra de progreso y los mensajes de estado — deja la salida limpia. |
+| `-I` | Pide **solo las cabeceras** (una petición HTTP `HEAD`), no el cuerpo de la página. |
+
+**El porqué:** en *fingerprinting* miramos las cabeceras **primero** porque son pequeñas y
+suelen delatar el software en la cabecera `Server:` — sin necesidad de descargar todo el HTML.
+Es la forma más rápida y silenciosa de saber "¿qué corre aquí?" antes de profundizar.
+
+**Ejercicio de refuerzo:** ¿qué comando usarías si quisieras ver **además** el cuerpo de la
+página junto con las cabeceras? (Pista: `curl -i` en minúscula hace justo eso; compara `-I`
+mayúscula vs `-i` minúscula).
+
+</details>
+
+**Leyendo la huella — ¿qué nos dice ese `Server:`?**
+
+- **Qué es "el stack".** Es la pila de capas de software que sostiene la app: el **lenguaje**
+  (aquí Python), el **framework** web (Flask) y el **servidor** que atiende las conexiones
+  (Werkzeug). Identificar el stack es el objetivo del fingerprinting.
+- **Cómo lo encontramos.** La cabecera `Server: Werkzeug/3.1.3 Python/3.13.3` lo dice
+  directamente. No siempre es tan explícita, pero cuando lo es, es un regalo.
+- **Qué es Werkzeug/Flask.** **Flask** es un framework web de Python; **Werkzeug** es su
+  servidor de desarrollo incorporado. Verlo en producción es en sí una señal: es un servidor
+  pensado para *desarrollo*, no para exponerse a atacantes.
+- **Python, no Node.js — por qué importaba.** El puerto `3000` es el default de **Express**
+  (el framework web de **Node.js**), así que a primera vista uno pensaría "esto es Node". La
+  cabecera lo desmiente: es Python. Confiar en el puerto habría llevado a un modelo mental
+  equivocado.
+- **Por qué el stack decide todo lo demás.** Cada stack tiene su propio catálogo de
+  vulnerabilidades. Saber que es Flask/Python **poda el árbol de vectores**: descartamos lo que
+  no aplica y priorizamos lo que sí.
+  - ❌ **Descartamos webshells `.php`**: PHP no se ejecuta en un servidor Python. Subir un
+    `shell.php` no serviría de nada — nadie lo interpretaría.
+  - ✅ **Ponemos en el radar** lo típico de Flask: **Jinja2 SSTI** (inyección de plantillas),
+    la **consola del debugger de Werkzeug** (RCE si `debug=True`) y **command injection**.
 
 El servidor de archivos revela otra cosa:
 

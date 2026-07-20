@@ -12,7 +12,13 @@ last_updated: "2026-06-09T02:15:25.093Z"
 
 **Core value**: Que cualquier persona dentro de la red pueda tomar el curso de forma autónoma — leer el concepto, intentar el ejercicio en el servidor wargame, y verificar su comprensión con el writeup completo.
 
-**Current focus**: Phase 1 — Site Foundation
+**Current focus**: Phase 3 — Writeup Production (Phase 2 diferida)
+
+## Quick Tasks Completed
+
+| Fecha | Slug | Resultado |
+|-------|------|-----------|
+| 2026-07-20 | healthcheck-pedagogia-recon | Enriquecida pedagogía de Healthcheck (Intro + Paso 0 + Paso 1): sección Escenario/kill-chain, convención "Explica el comando", Paso 1 reescrito |
 
 ---
 
