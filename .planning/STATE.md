@@ -20,12 +20,12 @@ last_updated: "2026-06-09T02:15:25.093Z"
 
 | Field | Value |
 |-------|-------|
-| Phase | 1 — Site Foundation |
-| Plan | TBD |
-| Status | Not started |
-| Progress | [----------] 0% |
+| Phase | 3 — Writeup Production (Phase 2 diferida) |
+| Plan | Un plan por CTF (oleadas) |
+| Status | In Progress |
+| Progress | 4 writeups completados |
 
-**Phase goal**: El sitio Docusaurus 3 sirve contenido en la intranet con navegación completamente en español, modo oscuro, sidebar de 7 categorías, breadcrumbs, enlaces anterior/siguiente y tabla de contenidos por página.
+**Phase goal**: Producción continua de writeups de CTFs por oleadas — un plan por ejercicio. El instructor resuelve y aporta capturas/datos; Claude redacta writeup (`site/docs/<cat>/`) + registro crudo (`soluciones/<cat>/`) sin acceder a la red wargame. Phase 1 completa; Phase 2 (andamiaje de contenido) diferida.
 
 ---
 
@@ -33,11 +33,11 @@ last_updated: "2026-06-09T02:15:25.093Z"
 
 | Metric | Value |
 |--------|-------|
-| Phases total | 3 |
-| Phases complete | 0 |
+| Phases total | 3 (Phase 2 diferida) |
+| Phases complete | 1 (Site Foundation) |
 | Requirements total (v1) | 19 |
 | Requirements complete | 0 |
-| Writeups complete | 2 (Baby RSA, My WebView) |
+| Writeups complete | 4 (Baby RSA, My WebView, DLL Injection, Healthcheck) |
 
 ---
 

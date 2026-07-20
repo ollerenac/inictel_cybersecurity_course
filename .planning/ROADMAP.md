@@ -3,8 +3,8 @@
 ## Phases
 
 - [x] **Phase 1: Site Foundation** - El sitio Docusaurus 3 funciona en la intranet con navegación completa en español
-- [ ] **Phase 2: Content Architecture** - La arquitectura de contenido está definida — catálogo curado, glosario, guía de autoría, índice de ejercicios y panel de conexión
-- [ ] **Phase 3: Writeup Production & Polish** - Los writeups del subconjunto curado están completos con plantilla estructurada, badges de dificultad, código resaltado y convenciones pedagógicas
+- [ ] **Phase 2: Content Architecture** — ⏸️ **DIFERIDA** — andamiaje de contenido (catálogo curado, glosario, guía de autoría, índice, panel). Pospuesta: no bloquea la producción de writeups
+- [ ] **Phase 3: Writeup Production** - Producción continua de writeups de CTFs por oleadas — un plan por ejercicio
 
 ---
 
@@ -24,7 +24,8 @@
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 2: Content Architecture
+### Phase 2: Content Architecture — ⏸️ DIFERIDA
+**Status**: Deferred (pospuesta 2026-07-20). No se elimina; se retoma cuando el volumen de writeups justifique el andamiaje (glosario, catálogo curado, índice filtrable). No bloquea Phase 3.
 **Goal**: Existe una arquitectura de contenido completa — catálogo de ejercicios curado y clasificado, glosario de términos, guía de autoría, índice maestro filtrable y panel de conexión al servidor wargame — que permite escalar la producción de writeups sin inconsistencias.
 **Mode:** mvp
 **Depends on**: Phase 1
@@ -37,10 +38,11 @@
   5. Existe una página de referencia de herramientas que lista cada herramienta usada en el curso y qué ejercicios la emplean
 **Plans**: TBD
 
-### Phase 3: Writeup Production & Polish
-**Goal**: El subconjunto curado de ejercicios tiene writeups completos — con plantilla estructurada, badge de dificultad, código resaltado con botón de copia, solución oculta tras details/summary, anotaciones de callejones sin salida, convención visual comando/respuesta, versiones de herramientas y prerrequisitos por categoría.
-**Mode:** mvp
-**Depends on**: Phase 2
+### Phase 3: Writeup Production
+**Goal**: Producción continua de writeups de CTFs por oleadas — un plan por ejercicio. Cada CTF lo resuelve el instructor (aporta screenshots y datos); Claude redacta dos artefactos: writeup pulido en `site/docs/<cat>/` (8 secciones: metadata → enunciado+infra → reconocimiento → teoría → explotación → flag → qué aprendimos → mitigaciones) y registro crudo en `soluciones/<cat>/` (traza real + árbol de decisión). Claude no accede a la red wargame.
+**Definition of done (por writeup)**: compila en `npm run build`; aparece en `sidebars.js`; flag verificado; teoría + mitigaciones + al menos un callejón sin salida presentes; dificultad declarada en `tags`.
+**Mode:** continuous (una oleada = un plan o un lote de CTFs)
+**Depends on**: Phase 1 (Phase 2 diferida — no es prerrequisito)
 **Requirements**: EXERCISE-01, EXERCISE-02, EXERCISE-03, EXERCISE-04, WRITEUP-01, WRITEUP-02, WRITEUP-03, WRITEUP-04
 **Success Criteria** (what must be TRUE):
   1. Cada ejercicio del subconjunto curado tiene un writeup que incluye Teoría, Herramientas y Solución paso a paso en español, siguiendo la plantilla de la guía de autoría
@@ -58,5 +60,14 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Site Foundation | 7/7 | Complete | 2026-05-20 |
-| 2. Content Architecture | 0/0 | Not started | - |
-| 3. Writeup Production & Polish | 0/0 | Not started | - |
+| 2. Content Architecture | 0/0 | ⏸️ Deferred | - |
+| 3. Writeup Production | 4 writeups | In Progress | ongoing |
+
+### Phase 3 — writeups completados
+
+| # | Ejercicio | Categoría | Dificultad | Estado |
+|---|-----------|-----------|------------|--------|
+| 1 | Baby RSA | Crypto | 🟢 Básico | ✅ |
+| 2 | My WebView | Web Hacking | 🟡 Intermedio | ✅ |
+| 3 | DLL Injection | Malware | 🔴 Avanzado | ✅ |
+| 4 | Healthcheck | Web Hacking | 🔴 Avanzado | ✅ |
