@@ -17,7 +17,7 @@ tags: [avanzado, web-hacking, command-injection, rce, analisis-de-codigo]
 
 ## Enunciado
 
-> Exploit a vulnerability in the image upload functionality to obtain the server's flag.
+> Obtain the server's flag.
 
 **Infraestructura del ejercicio:**
 
@@ -25,24 +25,79 @@ tags: [avanzado, web-hacking, command-injection, rce, analisis-de-codigo]
 |-----|----|--------|--------------|
 | Aplicación web (`p1`) | `192.168.200.100` | 3000 | — |
 | Servidor de archivos (`fileserver`) | `192.168.200.200` | 80 | — |
-| Máquina de trabajo (Debian 12) | — | — | asignadas por INICTEL |
-
-:::note[El enunciado engaña a propósito]
-
-El reto habla de "image upload functionality", pero el objetivo no sube imágenes por
-un formulario multipart. Sube imágenes **por URL**: le das una dirección y el servidor la
-procesa. Ese fetch server-side es la puerta. No dejes que el nombre del campo te fije el
-vector — confírmalo con el comportamiento real.
-
-:::
+| Máquina de trabajo (Debian 12) | `192.168.200.51` | — | asignadas por INICTEL |
 
 ---
 
 ## Reconocimiento
 
+### Paso 0 — Descubrir la red
+
+Empezamos sin conocer las IPs ni los puertos de los servidores del ejercicio: solo sabemos
+que nuestra máquina de trabajo es `192.168.200.51`, así que el resto de la red es
+`192.168.200.0/24`.
+
+**Hosts vivos** — un *ping sweep* en paralelo, guardado a un archivo para reutilizarlo:
+
+```bash
+seq 1 254 | xargs -P64 -I{} sh -c 'ping -c1 -W1 192.168.200.{} >/dev/null 2>&1 && echo 192.168.200.{}' | sort -t. -k4 -n > hosts.txt
+cat hosts.txt
+```
+
+```
+192.168.200.2
+192.168.200.51
+192.168.200.100
+192.168.200.200
+```
+
+- `192.168.200.2` — la puerta de enlace de la red (router).
+- `192.168.200.51` — nuestra propia máquina de trabajo.
+- `192.168.200.100` y `192.168.200.200` — los dos candidatos.
+
+**Puertos abiertos** — escaneamos cada host descubierto (leyendo `hosts.txt`) con `/dev/tcp`
+de bash, sin instalar nada:
+
+```bash
+while read -r h; do
+  seq 1 10000 | xargs -P200 -I{} bash -c "timeout 1 bash -c 'echo >/dev/tcp/$h/{}' 2>/dev/null && echo $h:{}"
+done < hosts.txt | sort -t: -k1,1 -k2,2n
+```
+
+```
+192.168.200.2:53
+192.168.200.51:22
+192.168.200.51:80
+192.168.200.100:3000
+192.168.200.200:80
+```
+
+- `192.168.200.2:53` — DNS del router, no es objetivo.
+- `192.168.200.51:22` y `:80` — nuestra propia máquina (SSH y un servidor local).
+- **`192.168.200.100:3000`** — un servicio web en un puerto **no estándar**: candidato principal.
+- **`192.168.200.200:80`** — un servidor HTTP.
+
+Ahora sí tenemos, obtenidos por nosotros mismos, los dos objetivos: `100:3000` y `200:80`.
+
+:::note[Detalles del escaneo]
+
+- **`xargs -P` en vez de `& … wait`.** `xargs -P64`/`-P200` paraleliza con la salida limpia;
+  un bucle con `… &` en shell interactiva funciona pero inunda la terminal con avisos de *job
+  control* (`[1] 6454`, `Exit 1`).
+- **`/dev/tcp/host/puerto` es de bash**, no de `sh` ni POSIX: abrir ese pseudo-archivo intenta
+  una conexión TCP; `timeout 1` corta los puertos cerrados. Por eso el escaneo va envuelto en
+  `bash -c`. Con `nmap` instalado, el equivalente es `nmap -p- --min-rate 2000 -iL hosts.txt`.
+- **El puerto 3000 no está en el top-1000 de nmap.** Un escaneo por defecto (`nmap 192.168.200.100`)
+  se perdería la app. Por eso barremos el rango completo (`-p-` o `seq 1 10000`), no solo los
+  puertos comunes.
+- Si un host sirviera HTTP pero **bloqueara ICMP**, el ping sweep no lo vería. Aquí ICMP está
+  permitido, así que el sweep basta como primer filtro.
+
+:::
+
 ### Paso 1 — Huellar el stack
 
-Antes de tocar nada, identificamos qué corre en cada host:
+Con los dos objetivos, identificamos qué corre en cada uno:
 
 ```bash
 curl -sI http://192.168.200.100:3000/

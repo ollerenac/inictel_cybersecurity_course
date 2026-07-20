@@ -17,7 +17,7 @@
 |-----|-----------|----------|
 | `p1` — app objetivo | `192.168.200.100:3000` | Flask (Werkzeug 3.1.3 / Python 3.13) |
 | `fileserver` | `192.168.200.200:80` | `python -m http.server` (SimpleHTTP 0.6) |
-| Máquina de trabajo | — | Debian 12 (bookworm), usuario `python` en el objetivo |
+| Máquina de trabajo | `192.168.200.51` | Debian 12 (bookworm) — el usuario `python` es del objetivo, no del workstation |
 
 ---
 
@@ -25,7 +25,10 @@
 
 ```mermaid
 flowchart TD
-    A[Recon: fingerprint de hosts] --> B[p1 = Werkzeug/Flask :3000<br/>fileserver = SimpleHTTP :80 con listado]
+    Z[Ping sweep de la /24<br/>desde workstation .51] --> A0[Hosts vivos → hosts.txt:<br/>.2 · .51 · .100 · .200]
+    A0 --> A0b[Escaneo de puertos de hosts.txt<br/>.100:3000 · .200:80 · .2:53 · .51:22,80]
+    A0b --> A[Recon: fingerprint de .100:3000 y .200:80]
+    A --> B[p1 = Werkzeug/Flask :3000<br/>fileserver = SimpleHTTP :80 con listado]
     B --> C[Encontrar formulario:<br/>/send?url= — Healthcheck]
     C --> D{Hipótesis: ¿SSRF?<br/>el campo pide una URL}
 
@@ -54,6 +57,46 @@ flowchart TD
 ---
 
 ## Traza cronológica detallada
+
+### 0. Descubrimiento de red
+
+Partimos solo con la IP del workstation (`192.168.200.51`).
+
+**a) Hosts vivos** — ping sweep, guardado a `hosts.txt` para encadenar el siguiente paso:
+
+```bash
+seq 1 254 | xargs -P64 -I{} sh -c 'ping -c1 -W1 192.168.200.{} >/dev/null 2>&1 && echo 192.168.200.{}' | sort -t. -k4 -n > hosts.txt
+cat hosts.txt
+```
+```
+192.168.200.2      # gateway/router
+192.168.200.51     # workstation (self)
+192.168.200.100    # candidato -> resultará ser p1 (app)
+192.168.200.200    # candidato -> resultará ser fileserver
+```
+
+**b) Puertos abiertos** — escaneo leyendo `hosts.txt` con `/dev/tcp` de bash:
+
+```bash
+while read -r h; do
+  seq 1 10000 | xargs -P200 -I{} bash -c "timeout 1 bash -c 'echo >/dev/tcp/$h/{}' 2>/dev/null && echo $h:{}"
+done < hosts.txt | sort -t: -k1,1 -k2,2n
+```
+```
+192.168.200.2:53       # DNS del router
+192.168.200.51:22      # self (SSH)
+192.168.200.51:80      # self (web local)
+192.168.200.100:3000   # OBJETIVO — web en puerto no estándar
+192.168.200.200:80     # fileserver
+```
+
+> **Notas de errores durante el solve:**
+> - Ping sweep, primer intento: `for i in ...; do (ping ...) & done; wait | sort`. El `&` en
+>   shell interactiva genera avisos de job control (`[N] PID`, `Exit 1`) que ensucian la
+>   salida, y `wait | sort` no captura los `echo` de los subshells. Se reemplazó por `xargs -P64`.
+> - Escaneo de puertos, primer intento: `for h in 100 200; do ... "..." \done | sort`. El
+>   `\done` (con `\`) y sin `;` dejó el `for` sin cerrar → prompt `>` colgado. Fix: `; done`.
+>   Además se cambió a `while read -r h ... done < hosts.txt` para no re-hardcodear las IPs.
 
 ### 1. Reconocimiento — fingerprint
 
