@@ -23,7 +23,7 @@ Build the site with **Docusaurus 3** (v3.10.1) on **Node.js 22 LTS**, configured
 ## Differentiating Features
 
 - **Exercise index with dual-axis filtering** (category AND difficulty) — essential for navigating the full exercise set
-- **Wargame connection reference panel** — server IP (192.168.22.28), credentials, connection instructions; persistent and prominent
+- **Wargame connection reference panel** — server IP (192.168.22.147), credentials, connection instructions; persistent and prominent
 - **"Try it first" collapsible solution** — step-by-step solution hidden behind `<details>`/`<summary>`; pedagogically meaningful
 - **Terminal output visually distinct from input commands** — separating what the user types from what the terminal returns; critical for exploitation writeups
 - **Dead-end annotations in writeups** — brief notes on failed approaches; high pedagogical value
@@ -66,7 +66,7 @@ The content architecture decisions (directory structure, frontmatter, nav model)
 ## Open Questions
 
 - **Which exercises to include?** The curated subset must be selected before writeup production begins. No research addressed selection criteria.
-- **Where does the site live?** Dedicated server or shared with wargame server (192.168.22.28)? Requires coordination with whoever manages that machine.
+- **Where does the site live?** Dedicated server or shared with wargame server (192.168.22.147)? Requires coordination with whoever manages that machine.
 - **What is the baseUrl?** `/` if served at the root IP, `/curso/` if at a subpath. Must be decided before the first build.
 - **Who are the writeup authors?** Single instructor or multiple contributors? Affects template/style guide complexity.
 - **Does the build machine have internet access?** Docusaurus/npm require internet on first install; subsequent builds can be offline.

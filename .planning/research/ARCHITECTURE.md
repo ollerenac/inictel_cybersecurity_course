@@ -111,7 +111,7 @@ This avoids a deeply nested structure (category > difficulty > exercise) that wo
 |-----------|---------------|--------------|
 | `mkdocs.yml` | Declares site metadata, theme, plugins, nav tree, build options | Must exist before any build command runs |
 | `docs/index.md` | Course homepage: purpose, structure, how to use the wargame server | None |
-| `docs/como-usar.md` | Connection instructions for `192.168.22.28`, credentials, troubleshooting | None |
+| `docs/como-usar.md` | Connection instructions for `192.168.22.147`, credentials, troubleshooting | None |
 | `docs/categorias.md` | Overview table of all 7 categories with exercise counts and descriptions | Category index pages |
 | `docs/{categoria}/index.md` | Category landing page: what this category covers, exercise list with difficulty badges | Individual exercise files in that category |
 | `docs/{categoria}/ejercicio-NN.md` | Single writeup: theory section, tools list, step-by-step solution | None (self-contained) |
@@ -224,14 +224,14 @@ Adequate for 5-20 concurrent users. No config file needed. Not a daemon — requ
 
 **Option C: serve `mkdocs build` output in-place on the wargame server**
 
-If the wargame server at `192.168.22.28` has nginx already running (likely, as it serves the wargame platform), the `site/` directory can be dropped into a virtual host there. Students access both the wargame and the course writeups from the same server. This is architecturally clean and avoids maintaining a separate server.
+If the wargame server at `192.168.22.147` has nginx already running (likely, as it serves the wargame platform), the `site/` directory can be dropped into a virtual host there. Students access both the wargame and the course writeups from the same server. This is architecturally clean and avoids maintaining a separate server.
 
 ### URL structure after build
 
 MkDocs generates clean URLs. An exercise at `docs/crypto/ejercicio-01.md` is served at:
 
 ```
-http://192.168.22.28/crypto/ejercicio-01/
+http://192.168.22.147/crypto/ejercicio-01/
 ```
 
 Search, navigation, and internal links all work without JavaScript routing — each page is a real HTML file at that path.

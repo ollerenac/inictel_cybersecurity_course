@@ -32,7 +32,7 @@
 ### Homepage & Orientation (HOME)
 
 - [ ] **HOME-01**: La página de inicio explica qué es el curso, cómo usarlo y describe los 3 niveles de dificultad con sus criterios
-- [ ] **HOME-02**: Los datos de conexión al servidor wargame (IP: 192.168.22.28, credenciales: user1/user1, instrucciones de acceso) están visibles en un lugar permanente y prominente
+- [ ] **HOME-02**: Los datos de conexión al portal OFFen EDU (IP: 192.168.22.147, instrucciones de acceso; sin credenciales compartidas — cada participante usa las suyas) están visibles en un lugar permanente y prominente
 - [ ] **HOME-03**: Existe un índice maestro de ejercicios filtrable por categoría Y por nivel de dificultad
 - [ ] **HOME-04**: Existe una guía editorial de progresión por dificultad — "comienza aquí" para cada nivel, con prerrequisitos recomendados
 

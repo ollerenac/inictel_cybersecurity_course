@@ -32,7 +32,7 @@
 **Success Criteria** (what must be TRUE):
   1. Existe un documento que lista los ejercicios curados con su categoría, nivel de dificultad asignado y criterio de clasificación, accesible en el repositorio
   2. Un autor nuevo puede abrir la guía de autoría y saber exactamente qué secciones incluir, qué convenciones de escritura seguir y cómo usar el glosario para elegir terminología
-  3. La página de inicio explica qué es el curso, describe los 3 niveles de dificultad y muestra los datos de conexión al servidor wargame (192.168.22.28 / user1/user1) de forma prominente
+  3. La página de inicio explica qué es el curso, describe los 3 niveles de dificultad y muestra los datos de conexión al portal OFFen EDU (192.168.22.147; cada participante usa sus credenciales) de forma prominente
   4. El índice maestro de ejercicios permite filtrar por categoría Y por nivel de dificultad simultáneamente, y muestra los 2 writeups ya existentes correctamente clasificados
   5. Existe una página de referencia de herramientas que lista cada herramienta usada en el curso y qué ejercicios la emplean
 **Plans**: TBD

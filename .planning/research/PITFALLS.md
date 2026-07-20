@@ -114,9 +114,9 @@ Commands in writeups are copied from a Linux environment with specific tool vers
 
 ### Pitfall: Hardcoded IP Addresses in Site Content
 
-The wargame server is at 192.168.22.28. If writeups hardcode this IP in commands and prose, and the server's IP changes (network reconfiguration, DHCP lease change, machine replaced), every writeup becomes incorrect simultaneously. Finding and updating all occurrences across a static site requires a full rebuild.
+The wargame server is at 192.168.22.147. If writeups hardcode this IP in commands and prose, and the server's IP changes (network reconfiguration, DHCP lease change, machine replaced), every writeup becomes incorrect simultaneously. Finding and updating all occurrences across a static site requires a full rebuild.
 
-- **Warning signs:** Commands in writeups contain `192.168.22.28` as a literal string rather than a variable or placeholder. The site has no single "configuration" or "environment" page where the server IP is defined once.
+- **Warning signs:** Commands in writeups contain `192.168.22.147` as a literal string rather than a variable or placeholder. The site has no single "configuration" or "environment" page where the server IP is defined once.
 - **Prevention:** Use a MkDocs variable or a site-wide substitution mechanism (MkDocs Macros plugin or a simple find-replace in the build step) to define the wargame server IP in one place. In writeup prose, refer to it as `WARGAME_IP` or `[server]` and note on the first-use page how to resolve it. Alternatively, define a LAN hostname for the wargame server and use the hostname throughout, making IP changes transparent.
 - **Phase:** Site architecture phase (before any writeup is written). Establish the IP reference convention and document it in the content authoring guide.
 
@@ -126,21 +126,33 @@ The wargame server is at 192.168.22.28. If writeups hardcode this IP in commands
 
 ### Pitfall: The Course Is Unusable When the Wargame Server Is Down
 
-The stated core value is: "read the concept, attempt the exercise on the wargame server, verify with the writeup." If the server at 192.168.22.28 is offline (maintenance, hardware failure, network change), steps 2 and 3 collapse. The course site exists but cannot deliver its central value. This is a structural SPOF with no current mitigation.
+The stated core value is: "read the concept, attempt the exercise on the wargame server, verify with the writeup." If the server at 192.168.22.147 is offline (maintenance, hardware failure, network change), steps 2 and 3 collapse. The course site exists but cannot deliver its central value. This is a structural SPOF with no current mitigation.
 
-- **Warning signs:** No monitoring exists for the wargame server's availability. Learners encounter the course site, attempt to connect to 192.168.22.28, and get a timeout with no explanation on the site. There is no documented fallback or status page.
+- **Warning signs:** No monitoring exists for the wargame server's availability. Learners encounter the course site, attempt to connect to 192.168.22.147, and get a timeout with no explanation on the site. There is no documented fallback or status page.
 - **Prevention:** (1) Add a visible note on the course landing page with the server's expected availability and who to contact if it is down. (2) Where possible, include enough context in writeups that learners can follow the solution logic even without access to the live challenge (screenshots of key steps, captured output of key commands). (3) Work with the infrastructure team to get a documented maintenance window and display it on the site. Full redundancy is out of scope, but learner expectation-setting costs nothing.
 - **Phase:** Site architecture phase (landing page and server status information). Writeup production phase (screenshot policy for key steps).
 
 ---
 
-### Pitfall: Shared Credentials Create Collisions Between Learners
+### Pitfall: Hardcoding Per-Exercise Infrastructure IPs as if They Were Stable
 
-The wargame server uses `user1`/`user1` as shared credentials. Multiple learners working simultaneously on challenges that modify state (file creation, privilege escalation leaving artifacts, web challenge session cookies, service restarts) will interfere with each other without knowing it. A learner's environment will not match the writeup because a previous learner left the system in a modified state.
+**Note:** An earlier version of this document assumed learners share a single `user1`/`user1`
+account, and warned about state collisions between them. That assumption was wrong. Each
+participant authenticates to the OFFen EDU portal with their own credentials, and each CTF
+deploys its own virtualized (OpenStack) environment. Learners are isolated by design, so
+cross-learner state collisions are not a real risk. The genuine risk is different, and is
+described below.
 
-- **Warning signs:** Challenges involve writing files, escalating privileges, or modifying service configurations. Learners report that the steps in the writeup produce different output than what they see. Two learners are working on the same challenge at the same time.
-- **Prevention:** (1) Identify during exercise selection which challenges have side effects on shared state — prefer stateless or read-only challenges for "básico" and "intermedio" levels. (2) Add a note in affected writeups: "If your environment does not match step X, the system may have been modified by another user. Connect at [time] or ask the administrator to reset the challenge." (3) If the wargame platform supports per-session sandboxing (isolated environments per login), document how to use it.
-- **Phase:** Exercise selection phase (filter for state-safe challenges). Content creation phase (add warnings to stateful writeups).
+Every exercise spins up its own virtualized environment, so the IPs a writeup documents
+(`192.168.200.x` workstations, file servers, per-challenge services) belong to *that*
+deployment. They are stable enough to document, but they are not project-wide constants. The
+only fixed address in the project is the OFFen EDU portal at `192.168.22.147`. Treating
+per-exercise IPs as global — or the portal IP as per-exercise — produces writeups that send
+learners to the wrong host.
+
+- **Warning signs:** A writeup references a `192.168.200.x` address without stating which exercise deployed it. The portal IP appears inside exercise steps instead of on the connection page. A learner reports that an IP from one writeup does not respond while working on a different exercise.
+- **Prevention:** (1) Document per-exercise infrastructure in a table inside that exercise's writeup, never in shared pages. (2) Keep the portal IP in `docs/conexion.md` only; writeups link to it rather than repeating it. (3) Never publish shared credentials — state that each participant uses their own.
+- **Phase:** Content creation phase (per-writeup infrastructure tables). Site architecture phase (single connection page).
 
 ---
 

@@ -1,3 +1,11 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-06-09T02:15:25.093Z"
+---
+
 # Project State — Curso de Ciberseguridad INICTEL
 
 ## Project Reference
@@ -56,7 +64,7 @@
 ### Known Open Questions
 
 - Which exercises to include in curated subset? (selection criteria not yet defined)
-- Where does the site live? (dedicated server vs. shared with 192.168.22.28)
+- Where does the site live? (dedicated server vs. shared with 192.168.22.147)
 - What is the baseUrl? (`/` vs `/curso/`) — must be set before first production build
 - Who authors writeups? (single instructor vs. multiple contributors)
 - Does the build machine have internet access for npm installs?

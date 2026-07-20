@@ -12,9 +12,8 @@ Todos los ejercicios se resuelven en el entorno del servidor wargame de INICTEL.
 
 | Campo | Valor |
 |-------|-------|
-| **Plataforma web** | http://192.168.22.28 |
-| **Usuario** | `user1` |
-| **Contraseña** | `user1` |
+| **Plataforma web** | http://192.168.22.147 |
+| **Credenciales** | Cada participante usa las credenciales asignadas por INICTEL |
 
 ## Estructura de red por ejercicio
 

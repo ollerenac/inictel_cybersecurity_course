@@ -269,7 +269,7 @@ Admonitions Docusaurus v3: usar `:::note[Título]` con líneas en blanco interna
 
 ### Credenciales y accesos
 
-- Servidor wargame plataforma: http://192.168.22.28, user1/user1
+- Portal OFFen EDU: http://192.168.22.147 (cada participante usa sus credenciales)
 - Workstation ejercicios (Linux): 192.168.200.51, user/user
 - Workstation ejercicios (Windows): 192.168.200.50
 - File server ejercicios: http://192.168.200.200/

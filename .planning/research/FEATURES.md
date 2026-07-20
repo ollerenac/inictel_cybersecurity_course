@@ -58,7 +58,7 @@ Features that go beyond the standard documentation template and are specifically
 
 - **Exercise index with dual-axis filtering (category + difficulty)** — A master index page listing all exercises, browsable by category (Crypto, Forense, etc.) AND by difficulty (Básico, Intermedio, Avanzado). Most generic documentation sites do not provide this. For a course with 7 categories and 3 levels, users need to find "all basic Web Hacking exercises" without reading every page. Implementable as a static HTML table with JavaScript filter, no backend needed.
 
-- **Wargame connection reference panel** — A persistent, prominently placed block (sidebar widget or landing page section) showing the server IP (192.168.22.28), credentials (user1/user1), and any connection instructions (SSH, HTTP, etc.). Users must connect to the wargame server to practice; this removes friction from the "read, then try" loop.
+- **Wargame connection reference panel** — A persistent, prominently placed block (sidebar widget or landing page section) showing the portal IP (192.168.22.147) and any connection instructions (SSH, HTTP, etc.) — no shared credentials are published; each participant uses their own. Users must connect to the wargame server to practice; this removes friction from the "read, then try" loop.
 
 - **"Try it first" spoiler / collapsible solution** — The step-by-step solution hidden behind a disclosure element (`<details>`/`<summary>` in HTML, or a collapsible admonition). Users who want to attempt the exercise before reading the answer can. This is a pedagogically meaningful feature that aligns with the course's self-paced learning model. Standard HTML5, no JavaScript required.
 
