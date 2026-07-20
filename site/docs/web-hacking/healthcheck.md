@@ -275,6 +275,13 @@ mayúscula vs `-i` minúscula).
   - ✅ **Ponemos en el radar** lo típico de Flask: **Jinja2 SSTI** (inyección de plantillas),
     la **consola del debugger de Werkzeug** (RCE si `debug=True`) y **command injection**.
 
+:::tip[Ejercicio de refuerzo]
+Imagina que en otro objetivo la cabecera fuera `Server: nginx/1.18 (Ubuntu)` y, en otra,
+`X-Powered-By: PHP/8.1`. ¿Qué stack sugiere cada una, y qué clase de vector **descartarías** y
+cuál **priorizarías** en cada caso? (Pista: piensa qué lenguaje ejecuta cada servidor y qué
+webshell tendría sentido).
+:::
+
 El servidor de archivos revela otra cosa:
 
 ```bash
@@ -611,6 +618,11 @@ disfrazado"*. La situación se **extrapola**:
 - **Defensiva:** el código fuente es secreto por diseño. Un `.git` o un backup filtrado le
   entrega al atacante el mapa completo de tus vulnerabilidades.
 
+**Ejercicio de refuerzo:** aquí encontramos el código por un listado de directorios abierto.
+En un objetivo real no siempre hay listado — pero sí rutas típicas donde el código "se escapa".
+Escribe **3 URLs** que probarías a mano para intentar leer código o configuración expuesta.
+(Pista: piensa en carpetas de control de versiones y en archivos que dejan los editores).
+
 </details>
 
 ---
@@ -666,6 +678,13 @@ permiten esto:
 Todos comparten la misma raíz: tu entrada, que debía ser **un dato** (un nombre de host), se
 cuela como **sintaxis** que el shell obedece. Guarda este `;` en mente — es exactamente el que
 usaremos contra Healthcheck.
+
+:::tip[Ejercicio de refuerzo]
+El servidor corre `ping <entrada>`. Escribe una entrada que ejecute `whoami` usando **`&&`** en
+vez de `;`. Ahora una pregunta fina: con `&&`, ¿tu `whoami` corre siempre, o solo si el `ping`
+tuvo éxito? ¿Y qué pasaría si el host no existe? Compáralo con `;` (que corre pase lo que pase)
+y con <code>&#124;&#124;</code> (que corre solo si el primero **falla**).
+:::
 
 ### El anti-patrón: `subprocess` con `shell=True`
 
@@ -800,6 +819,12 @@ Ese grupo capturado —`127.0.0.1:3000`— es el "host" que el programa mete en 
 Como `[^/]+` frena en la primera `/`, **ese host nunca puede contener una `/`**. Por eso todos
 nuestros payloads de inyección tienen que arreglárselas sin usar `/`.
 
+**Ejercicio de refuerzo:** ahora escribe tú un patrón. Quieres uno que acepte **solo una IPv4**
+—es decir, únicamente dígitos y puntos, nada más— de principio a fin. Partiendo de la misma
+idea (`^…$`, una clase de caracteres y un `+`), ¿cómo quedaría la clase? (Pista: dentro de los
+corchetes, ¿qué dos tipos de carácter permitirías?). ¿Tu patrón dejaría pasar `1.2.3.4`? ¿Y
+`1.2.3.4; id`?
+
 </details>
 
 ### Por qué `file://` fallaba y `http://` funciona
@@ -867,6 +892,11 @@ curl -s "$T/send?url=$1"                  # 1. hace la petición
 **En resumen:** `show '<payload>'` = *pide → recorta el resultado → limpia el HTML* → te imprime
 solo la salida del comando. Es comodidad, no parte del exploit: podrías hacer el mismo `curl` a
 mano cada vez, pero repetirlo 20 veces sería tedioso.
+
+**Ejercicio de refuerzo:** `show` descarta las cabeceras de la respuesta (usa `curl -s`, solo el
+cuerpo). Modifícala para que, **además** del resultado limpio, imprima las cabeceras HTTP de la
+respuesta. (Pista: ¿qué opción de `curl` viste en el Paso 1 para pedir cabeceras? ¿Y cómo
+combinarías "cuerpo + cabeceras" en una sola petición?).
 
 </details>
 
