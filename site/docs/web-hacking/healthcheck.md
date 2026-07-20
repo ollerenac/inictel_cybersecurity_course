@@ -49,16 +49,14 @@ workstation, y desde él pivotaremos.** El *ping sweep*, el escaneo de puertos y
 sigue es, exactamente, lo que un adversario haría en la fase de *Actions on Objectives* de la
 cadena de ataque:
 
-```
-   FASES 1–6  ·  fuera del alcance del CTF            FASE 7  ·  aquí empezamos
- ┌────────────────────────────────────────────┐    ┌──────────────────────────────┐
- │ 1 Reconnaissance  →  2 Weaponization        │    │ 7 Actions on Objectives      │
- │ 3 Delivery        →  4 Exploitation         │ ═▶ │   🎯 foothold en .51          │
- │ 5 Installation    →  6 Command & Control    │    │   recon interno · lateral ·  │
- │                                             │    │   escalar hacia el objetivo  │
- └────────────────────────────────────────────┘    └──────────────────────────────┘
-    cómo el atacante llegó a la workstation            lo que hace desde ella
-                                                       ── este CTF ──
+```mermaid
+flowchart LR
+    R["1 · Reconnaissance"] --> W["2 · Weaponization"] --> D["3 · Delivery"] --> E["4 · Exploitation"] --> I["5 · Installation"] --> C["6 · Command &amp; Control"] --> A["7 · Actions on Objectives"]
+    A --> HERE["🎯 Foothold en workstation 192.168.200.51<br/>recon interno · movimiento lateral · escalar"]
+    F1["Fases 1–6: cómo el atacante<br/>llegó a la workstation<br/>(fuera del alcance del CTF)"] -.-> C
+    style HERE fill:#1a5b2a,color:#fff
+    style A fill:#3d3d1a,color:#fff
+    style F1 fill:#2a2a2a,color:#aaa
 ```
 
 Las fases 1 a 6 de la **Cyber Kill Chain** (el modelo de Lockheed Martin: `Reconnaissance →
