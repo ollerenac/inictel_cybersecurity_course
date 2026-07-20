@@ -474,6 +474,47 @@ empieza el ataque.
 
 La hipótesis inicial es SSRF (el campo pide una URL). La probamos:
 
+<details>
+<summary>🔍 ¿Qué es SSRF (Server-Side Request Forgery)? — explicado simple</summary>
+
+**En una frase:** normalmente *tú* le pides cosas a un servidor; en SSRF **engañas al servidor
+para que sea él quien pida algo por ti**, hacia un destino que tú eliges.
+
+**La analogía.** Imagina un edificio con un recepcionista (el servidor) tras una puerta con
+llave. Tú, desde afuera, no puedes entrar. Pero hay un buzón: *"escribe una dirección y el
+recepcionista irá a buscar el documento de ahí y te lo trae"*. La idea es que escribas
+direcciones públicas… pero tú escribes *"ve a la oficina del jefe, **aquí adentro**, y tráeme
+el archivo del escritorio"*. El recepcionista —que **sí** tiene acceso adentro— obedece y te
+trae documentos internos que jamás alcanzarías desde la calle.
+
+**Por qué es peligroso.** El servidor vive **dentro** de la red, detrás del firewall. Puede
+hablar con cosas que tú no:
+
+- `http://localhost/admin` → un panel de administración interno.
+- `http://169.254.169.254/…` → metadatos de la nube (AWS/GCP) → **robar credenciales cloud**.
+- `http://192.168.0.50/` → otros servidores internos.
+- a veces `file:///etc/passwd` → leer archivos locales del servidor.
+
+Tú apuntas, el servidor dispara. Es tu **proxy involuntario** hacia la red interna. Aparece en
+cualquier función tipo *"danos una URL y la procesamos"*: previsualizar una imagen por URL,
+webhooks, "genera un PDF desde esta web", importadores.
+
+**¿Y por qué este reto NO era SSRF?** El campo pedía una URL, así que **olía** a SSRF. Pero al
+probarlo (abajo), el servidor **no visitó** la URL — le hizo `ping`. La diferencia está en la
+respuesta:
+
+| | SSRF | Nuestro Healthcheck |
+|---|---|---|
+| Qué hace con tu URL | La **visita** (petición HTTP) | Le hace **`ping`** (comando del SO) |
+| Qué te devuelve | El **contenido** de la página | La **salida de `ping`** |
+| Vector | SSRF | OS Command Injection |
+
+> El ejercicio **My WebView** de este mismo curso **sí** es SSRF puro — compáralos: mismo
+> disfraz (un campo que pide una URL), vulnerabilidad distinta. La apariencia engaña; el
+> comportamiento manda.
+
+</details>
+
 ```bash
 curl -s "http://192.168.200.100:3000/send?url=http://192.168.200.200/"
 ```
