@@ -291,7 +291,86 @@ listado abierto suele filtrar código fuente.
 
 ### Paso 2 — Encontrar el formulario
 
-El cuerpo de la página principal contiene:
+**Meta de este paso:** localizar la *superficie de ataque* — el punto donde la app recibe
+datos nuestros — y entender **cómo enviarle esos datos**. En concreto, terminaremos sabiendo
+que existe un `GET /send?url=<valor>` cuyo `url` controlamos. Ese parámetro será la puerta por
+la que entraremos.
+
+Sabemos que en `:3000` hay una app Flask. Ahora necesitamos ver **qué hace** — su interfaz.
+Descargamos el cuerpo (HTML) de la página principal con `curl`:
+
+```bash
+curl -s http://192.168.200.100:3000/
+```
+
+<details>
+<summary>🔍 ¿Qué es <code>curl</code> y para qué sirve?</summary>
+
+`curl` es un **cliente HTTP de línea de comandos**: hace peticiones a un servidor y te muestra
+la respuesta, sin navegador. Es la navaja suiza para hablar con la web desde la terminal.
+
+Sirve para mucho más que descargar una página:
+
+- **Descargar** páginas o archivos (`curl -O http://.../archivo.zip`).
+- **Hablar con APIs** — enviar y recibir JSON.
+- **Enviar formularios** (peticiones GET o POST).
+- **Manipular la petición**: cabeceras (`-H`), cookies (`-b`), autenticación (`-u`), método
+  (`-X`).
+
+**¿Y qué es un "request" o un "POST"?** Toda interacción web es un **mensaje** que tu cliente
+le manda al servidor — un *request* (petición) HTTP:
+
+- **GET** = *"dame esto"* — pedir una página o un recurso. Los datos van en la URL.
+- **POST** = *"toma estos datos y procésalos"* — enviar un formulario de login, subir algo,
+  crear un registro. Los datos van en el cuerpo de la petición.
+
+Tu navegador hace estos requests todo el tiempo, por debajo, cuando haces clic o envías un
+formulario. **`curl` te deja hacerlos tú, a mano** — eligiendo el método, los parámetros y las
+cabeceras con total libertad. Ahí está su valor para el hacking: puedes enviar peticiones que
+un navegador o un formulario "normal" **nunca** enviarían (valores raros, cabeceras
+manipuladas), que es exactamente lo que dispara un bug.
+
+</details>
+
+La página completa trae mucho ruido (todo el CSS de estilo). Para quedarnos solo con lo
+estructural, filtramos las etiquetas que nos interesan:
+
+```bash
+curl -s http://192.168.200.100:3000/ | grep -iE '<form|action=|<input|<button'
+```
+
+<details>
+<summary>🔍 ¿De dónde sale la intuición de buscar justo esas etiquetas?</summary>
+
+Buena pregunta — y sí, exactamente: **viene de conocer HTML** (el lenguaje de marcado del
+front-end) y de saber cómo **HTTP** convierte un formulario en una petición. No es magia ni
+adivinación; es leer el HTML como un mapa.
+
+Una página web puede tener miles de líneas, pero la **superficie donde el usuario mete datos**
+vive siempre en un puñado de etiquetas conocidas:
+
+| Etiqueta / atributo | Por qué la buscas |
+|---------------------|-------------------|
+| `<form>` | Define un envío de datos: dónde empieza la interacción. |
+| `<input>`, `<textarea>`, `<select>` | Los campos que el usuario **controla** — la entrada. |
+| `action=`, `method=`, `name=` | A dónde va la petición, con qué método, y cómo se llama cada dato. |
+| `<button>` | Lo que dispara el envío. |
+
+Filtrar por esas etiquetas = ir directo a la pregunta *"¿dónde puede un usuario introducir
+datos, y a dónde se envían?"* — descartando todo el CSS y el maquetado que no importa.
+
+Con más experiencia el set crece: `<a href=…>` (rutas y enlaces ocultos), `<script src=…>`
+(JS y endpoints), y hasta los comentarios `<!-- … -->` (que a veces filtran credenciales o
+rutas internas). La habilidad transferible es **leer HTML como un inventario de superficie de
+ataque, no como una página bonita.**
+
+**Ejercicio de refuerzo:** si quisieras encontrar rutas o enlaces ocultos en el HTML en vez de
+formularios, ¿qué término agregarías al `grep`? (Pista: los enlaces se declaran con
+`<a href="...">`).
+
+</details>
+
+Eso aísla el formulario:
 
 ```html
 <form action="/send" method="GET">
@@ -301,7 +380,95 @@ El cuerpo de la página principal contiene:
 </form>
 ```
 
-Un campo `url`, método GET, ruta `/send`. La aplicación se llama **Healthcheck**.
+<details>
+<summary>🔍 Explica la estructura — el <code>&lt;form&gt;</code></summary>
+
+Un formulario HTML es la instrucción que le dice al navegador **cómo armar una petición** cuando
+el usuario pulsa el botón. Cada atributo importa:
+
+| Parte | Qué significa |
+|-------|---------------|
+| `<form action="/send" ...>` | `action` es **la ruta a la que se envía**: al pulsar Send, la petición va a `/send`. |
+| `method="GET"` | El método HTTP. Con **GET**, los datos del formulario viajan **en la URL** como *query string* (`?campo=valor`), a la vista. (Con `POST` irían en el cuerpo de la petición). |
+| `<input ... name="url">` | Un campo de texto. Su atributo `name` es la **clave** del dato: lo que escribas se envía como `url=<tu_texto>`. |
+| `placeholder="ex) https://..."` | Solo un texto de ayuda gris; no se envía. Pero es una **pista**: sugiere que el campo espera una URL. |
+| `<button type="submit">` | Dispara el envío del formulario. |
+
+**Cuidado con la palabra "método".** Aquí `/send` es una **ruta** (un *path*, una dirección en
+el servidor) — no la confundas con:
+
+- el **método HTTP** (GET/POST): el *verbo* de la petición, lo que indica `method="GET"`;
+- un **método/función** de programación (una función en el código).
+
+Esos tres conceptos —la **ruta** (`/send`), el **método HTTP** (`GET`) y la **función**
+(`send()`)— conviven sin contradicción: la petición usa el método **GET** para pedir la ruta
+**`/send`**, y el servidor Flask ejecuta la **función** que tiene registrada para esa ruta. En
+este reto esa función se llama, casualmente, `send()` (lo veremos en `app.py`) — pero podría
+llamarse cualquier cosa; el nombre de la ruta y el de la función son independientes.
+
+**La conclusión clave — qué pasa al pulsar *Send*.** El navegador toma los tres atributos
+(`action`, `method`, `name`) y arma una URL: la ruta del `action`, un `?`, y luego
+`nombre=valor` por cada campo. Con un ejemplo concreto: si escribes `https://google.com` en el
+campo y pulsas *Send*, el navegador pide esta dirección:
+
+```
+http://192.168.200.100:3000/send?url=https://google.com
+```
+
+En la jerga de HTTP, esa misma petición se anota de forma abreviada como
+`GET /send?url=...` — es decir: **método** GET, **ruta** `/send`, y **query string**
+`?url=<valor>`. Las dos formas describen lo mismo: la primera es la URL completa que ves en el
+navegador; la segunda, cómo se nombra la petición en HTTP.
+
+Y aquí está el porqué de todo lo que sigue: **si enviar el formulario es solo pedir una URL con
+un parámetro, no necesitamos el navegador ni el formulario.** Podemos escribir esa URL a mano y
+dispararla con `curl`:
+
+```bash
+curl -s "http://192.168.200.100:3000/send?url=https://google.com"
+```
+
+Así controlamos el valor de `url` con total libertad — incluidos valores que un formulario
+"normal" nunca enviaría. El formulario es solo una fachada amable sobre un `GET /send?url=`.
+
+**Ejercicio de refuerzo:** si el formulario usara `method="POST"` en vez de `GET`, ¿seguirías
+pudiendo probarlo con `curl`? ¿Qué opción de `curl` necesitarías para enviar el dato en el
+cuerpo? (Pista: `curl -d "url=..."`).
+
+</details>
+
+Podemos comprobarlo sin escribir código: basta pedir esa URL directamente en el navegador del
+workstation.
+
+![Healthcheck en el navegador — la barra muestra /send?url=https://google.com y el resultado del ping](/img/wh-healthcheck/wh-healthcheck-01.png)
+
+Fíjate en la **barra de direcciones**: es exactamente la URL que dedujimos del formulario
+(`…/send?url=https://google.com`), tecleada a mano, sin tocar el campo ni el botón. El servidor
+la procesó igual y respondió:
+
+```
+ping: google.com: Temporary failure in name resolution
+```
+
+Dos pistas caen de regalo: la app **ejecuta `ping`** con lo que le pasamos (no descarga la
+página), y la red **no resuelve nombres externos** (está aislada, sin internet). Ese
+comportamiento lo confirmamos y explotamos en el Paso 3.
+
+:::note[¿Navegador o `curl`? Los dos hacen la misma petición]
+
+El navegador y `curl` envían **exactamente el mismo** `GET /send?url=…` — la captura de arriba
+lo demuestra. La diferencia es el control: el navegador es cómodo para *ver* que la superficie
+existe, pero escapa y limita lo que puedes escribir. `curl` te deja enviar **cualquier** valor
+(caracteres raros, inyecciones), automatizar y ver la respuesta cruda. Por eso de aquí en
+adelante atacamos con `curl`: el navegador nos sirvió para **confirmar**, `curl` nos sirve para
+**explotar**.
+
+:::
+
+En resumen: la app se llama **Healthcheck** y expone un endpoint `GET /send` con un solo
+parámetro, `url`. Ese parámetro, controlable por nosotros, es la superficie de ataque. Los
+Pasos 0–2 fueron reconocimiento (qué hosts, qué software, qué interfaz); a partir del Paso 3
+empieza el ataque.
 
 ### Paso 3 — Observar el comportamiento real
 
@@ -333,8 +500,30 @@ curl -s "http://192.168.200.100:3000/send?url=http://127.0.0.1:3000/" # -> ping:
 - `http://127.0.0.1:3000/` pasa el host `127.0.0.1:3000` tal cual a `ping` → confirma que el
   host de la URL se inyecta en un comando del sistema.
 
-Si el servidor construye una línea de shell con nuestra entrada, el vector es **OS Command
-Injection**, no SSRF.
+**¿Por qué esto es OS Command Injection y no SSRF?** La diferencia está en *qué hace el
+servidor con nuestra entrada*:
+
+- En **SSRF**, el servidor tomaría nuestra URL y haría una **petición HTTP** hacia ella —
+  actuaría como un navegador que visita la dirección. Nos devolvería el **contenido** de esa
+  página.
+- En **OS Command Injection**, el servidor toma nuestra entrada y la incrusta dentro de un
+  **comando del sistema operativo** — una línea de texto como `ping <nuestra_entrada>` — y se
+  la entrega al *shell* del sistema para que la ejecute. Nos devuelve la **salida de ese
+  comando**.
+
+Aquí vimos la salida de `ping`, no el contenido de una página web. Eso delata que el servidor
+está **armando una línea de shell** —algo como `ping <lo que enviamos> …`— y ejecutándola en su
+máquina.
+
+> "Construir una línea de shell con nuestra entrada" significa exactamente eso: el servidor
+> concatena texto fijo (`ping `) con nuestro dato para formar un comando, y se lo pasa al
+> intérprete de comandos (`/bin/sh`) para que lo corra.
+
+Y ahí está el peligro: si nuestra entrada cae **dentro** de esa línea de comando, quizá podamos
+**colar comandos extra** aprovechando la sintaxis del shell (un `;`, un `|`, un `&&`). El
+vector ya no es "hacer que el servidor visite una URL" (SSRF), sino "hacer que el servidor
+**ejecute comandos** por nosotros" (OS Command Injection). Confirmar esa sospecha —y ver cómo
+se arma exactamente el comando— es lo que haremos leyendo el código en el Paso 4.
 
 ### Paso 4 — Filtrar el código fuente
 
@@ -347,6 +536,42 @@ curl -s http://192.168.200.200/1/eng/for_user/app.py
 Pasamos de caja negra a caja blanca. Con la fuente, el punto de inyección deja de ser una
 suposición.
 
+<details>
+<summary>🔍 ¿No es demasiado fácil que el código esté ahí para leerlo?</summary>
+
+A primera vista huele a CTF "flojo": ¿el código de la aplicación, servido tal cual en un
+directorio abierto? En la vida real nadie deja `app.py` tan a la vista… ¿o sí?
+
+**Sí — solo que de formas más sutiles.** El reto lo pone descaradamente para que la lección sea
+clara, pero el fenómeno de fondo —**exposición de código fuente por mala configuración**
+(*source disclosure*)— es de los hallazgos más comunes en pentests reales. Lo que aquí es un
+file server con listado abierto, en producción aparece como:
+
+- Una carpeta **`.git/`** desplegada por accidente junto al sitio → con una herramienta como
+  `git-dumper` reconstruyes **todo** el repositorio: código, historial, y a veces credenciales
+  olvidadas en commits viejos.
+- **Backups y temporales** que dejan los editores o los despliegues: `app.py~`, `.app.py.swp`,
+  `app.py.bak`, `config.php.old`.
+- **Listado de directorios** activado sin querer (Apache con `Options +Indexes`, o alguien que
+  dejó corriendo un `python -m http.server` "un momentito").
+- Un servidor mal configurado que **entrega `.py` o `.env` como texto plano** en vez de
+  ejecutarlos.
+- Buckets S3 públicos, artefactos de CI, imágenes de Docker con el código dentro.
+
+Todos terminan en lo mismo: **el atacante consigue leer la fuente.** El CTF comprime todos esos
+casos en uno solo y grosero; la realidad los reparte en canales más discretos — pero el
+resultado es idéntico.
+
+Así que no lo leas como *"el reto es fácil"*, léelo como *"esto pasa de verdad, solo que
+disfrazado"*. La situación se **extrapola**:
+
+- **Ofensiva:** en todo objetivo, busca fuente expuesta (`.git/`, backups, listados abiertos).
+  Encontrarla convierte caja negra en caja blanca — de *adivinar* el bug a *leerlo*.
+- **Defensiva:** el código fuente es secreto por diseño. Un `.git` o un backup filtrado le
+  entrega al atacante el mapa completo de tus vulnerabilidades.
+
+</details>
+
 ---
 
 ## Teoría
@@ -354,14 +579,56 @@ suposición.
 ### ¿Qué es OS Command Injection?
 
 **OS Command Injection** ocurre cuando una aplicación construye un comando del sistema
-operativo concatenando entrada del usuario, y esa entrada se interpreta como parte de la
-sintaxis del shell en lugar de como un dato. El atacante inserta metacaracteres del shell
-(`;`, `|`, `&&`, `` ` ``, `$()`) para ejecutar comandos arbitrarios con los privilegios del
-proceso web.
+operativo concatenando entrada del usuario, y esa entrada se interpreta como **código** —parte
+de la sintaxis del shell— en vez de como **datos** (un simple valor de texto). El atacante
+inserta metacaracteres del shell (`;`, `|`, `&&`, `` ` ``, `$()`) para ejecutar comandos
+arbitrarios con los privilegios del proceso web.
+
+Esa confusión entre **código y datos** es el corazón de casi todas las inyecciones (SQLi, XSS,
+command injection, SSTI): la vulnerabilidad nace cuando algo que debía ser un dato inerte
+termina tratándose como una instrucción ejecutable.
+
+**Un ejemplo para verlo.** Imagina una web con una herramienta de "hacer ping a un host". Por
+dentro, el servidor arma el comando pegando lo que escribes:
+
+```
+comando = "ping " + entrada_del_usuario
+```
+
+Uso normal — escribes una IP:
+
+```bash
+# entrada: 8.8.8.8
+ping 8.8.8.8            # el servidor corre esto. Todo bien.
+```
+
+Ahora un atacante escribe algo que **no** es una IP, sino una IP **seguida de sintaxis de
+shell**:
+
+```bash
+# entrada: 8.8.8.8; id
+ping 8.8.8.8; id        # el shell ve el ";" y ejecuta DOS comandos: ping, y luego id
+```
+
+El `;` no viajó como parte del host — el shell lo leyó como "aquí termina un comando, empieza
+otro". El atacante acaba de ejecutar `id` en el servidor. Los **metacaracteres del shell** que
+permiten esto:
+
+| Metacarácter | Qué hace | Ejemplo (`ping <entrada>`) |
+|--------------|----------|----------------------------|
+| `;` | Ejecuta un comando y luego otro, pase lo que pase | `8.8.8.8; whoami` |
+| <code>&#124;&#124;</code> | Ejecuta el segundo **solo si el primero falla** | <code>x &#124;&#124; whoami</code> |
+| `&&` | Ejecuta el segundo **solo si el primero funciona** | `8.8.8.8 && cat /etc/passwd` |
+| <code>&#124;</code> | *Pipe*: pasa la salida del primero al segundo | <code>8.8.8.8 &#124; base64</code> |
+| `` $(…) `` o `` `…` `` | *Sustitución*: ejecuta lo de dentro y mete su salida ahí | `ping $(whoami)` |
+
+Todos comparten la misma raíz: tu entrada, que debía ser **un dato** (un nombre de host), se
+cuela como **sintaxis** que el shell obedece. Guarda este `;` en mente — es exactamente el que
+usaremos contra Healthcheck.
 
 ### El anti-patrón: `subprocess` con `shell=True`
 
-En Python, la diferencia entre seguro e inseguro es una sola bandera:
+En Python, la diferencia entre seguro e inseguro es una sola flag:
 
 ```python
 # VULNERABLE — shell=True interpreta la cadena completa como un comando de shell
@@ -416,6 +683,56 @@ Tres fallos encadenados:
 La única barrera que sobrevive es la del propio regex: el host se captura como `[^/]+`, así
 que **no puede contener el carácter `/`**. Es la restricción con la que hay que convivir.
 
+<details>
+<summary>🔍 Explica el patrón <code>[^/]+</code> paso a paso</summary>
+
+Un *regex* (expresión regular) es una forma de describir un patrón de texto. Vamos a leer
+`[^/]+` construyéndolo de a poco, con el ejemplo `abc/def`.
+
+**1. Los corchetes `[ ]` = "un carácter de este tipo".**
+`[abc]` significa "un carácter que sea `a`, `b` o `c`". Coincide con **una** letra a la vez, no
+con la palabra entera.
+
+**2. El `^` pegado tras el `[` = "excepto" (niega el conjunto).**
+`[^abc]` le da la vuelta: "un carácter que **no** sea `a`, `b` ni `c`".
+
+> ⚠️ Ese `^` significa "excepto" **solo dentro de los corchetes**. El mismo símbolo `^` al
+> principio de un regex (fuera de corchetes) significa otra cosa: "inicio del texto". Mismo
+> carácter, dos significados según dónde esté. En nuestro regex `^(https?://)([^/]+)` aparecen
+> los dos: el primero ancla el inicio; el de dentro de `[^/]` niega.
+
+**3. Metemos `/` dentro: `[^/]` = "un carácter que no sea una barra".**
+Cualquier cosa —letras, números, `;`, espacios, `$`— **menos** `/`.
+
+**4. El `+` = "uno o más, seguidos".**
+`[^/]+` = "una racha de uno o más caracteres, y **ninguno** puede ser `/`".
+
+**Ahora míralo funcionar sobre `abc/def`.** El motor lee de izquierda a derecha y va tomando
+caracteres mientras se cumpla la regla; en cuanto falla, se detiene:
+
+```
+a   b   c   /   d   e   f
+✓   ✓   ✓   ✗
+└───────┘   └── la primera "/" rompe la regla → aquí para
+ [^/]+ toma "abc"
+```
+
+Toma `a`, `b`, `c` (ninguno es `/`), llega a la `/` → deja de coincidir → **se detiene**. Nunca
+cruza la barra. En una frase: **`[^/]+` agarra texto hasta la primera `/`.**
+
+**Aplicado al código del reto**, `^(https?://)([^/]+)` sobre `http://127.0.0.1:3000/algo`:
+
+- `^` → empieza desde el inicio del texto.
+- `(https?://)` → consume literalmente `http://` (el `?` hace la `s` opcional, así acepta
+  `http` o `https`).
+- `([^/]+)` → captura `127.0.0.1:3000` y **se detiene en la `/`** de antes de `algo`.
+
+Ese grupo capturado —`127.0.0.1:3000`— es el "host" que el programa mete en el comando `ping`.
+Como `[^/]+` frena en la primera `/`, **ese host nunca puede contener una `/`**. Por eso todos
+nuestros payloads de inyección tienen que arreglárselas sin usar `/`.
+
+</details>
+
 ### Por qué `file://` fallaba y `http://` funciona
 
 El regex ancla en `^(https?://)`. `file:///etc/passwd` no empieza por `http://` ni
@@ -429,13 +746,60 @@ agujero comparten la misma línea.
 
 ### Paso 1 — Un helper para leer el resultado
 
-El resultado del comando vuelve dentro de un `<div class="result">`. Esta función extrae solo
-ese bloque y le quita las etiquetas HTML:
+Cada vez que atacamos, el servidor nos devuelve **toda la página HTML** (la interfaz neón
+completa), pero a nosotros solo nos interesa el texto del `Execution Result`. En vez de leer a
+ojo esa marabunta de HTML en cada intento, creamos una función que lo hace por nosotros:
+pide la URL, recorta el bloque del resultado y le quita las etiquetas HTML.
 
 ```bash
 T=http://192.168.200.100:3000
 show(){ curl -s "$T/send?url=$1" | sed -n '/class="result"/,/<\/div>/p' | sed 's/<[^>]*>//g'; }
 ```
+
+<details>
+<summary>🔍 Explica el comando — la función <code>show()</code></summary>
+
+Son **dos líneas**: una guarda la dirección base, la otra define una función que la reutiliza.
+
+**Línea 1 — una variable para no repetir la URL:**
+```bash
+T=http://192.168.200.100:3000
+```
+`T` guarda la base del objetivo. A partir de ahora, `$T` vale esa dirección. Ahorra teclear la
+IP y el puerto en cada comando.
+
+**Línea 2 — la función `show`.** `nombre(){ … ; }` **define** una función (una orden reutilizable).
+Al llamar `show 'algo'`, el `'algo'` entra en la función como `$1` (su primer argumento).
+Dentro hay **tres etapas encadenadas por *pipes* (`|`)**, donde la salida de cada una alimenta
+a la siguiente:
+
+```bash
+curl -s "$T/send?url=$1"                  # 1. hace la petición
+  | sed -n '/class="result"/,/<\/div>/p'  # 2. recorta el bloque del resultado
+  | sed 's/<[^>]*>//g'                    # 3. borra las etiquetas HTML
+```
+
+1. **`curl -s "$T/send?url=$1"`** — dispara la petición a `…:3000/send?url=<tu_payload>`. El
+   `$1` es lo que le pases al llamar `show`. Devuelve la página HTML completa.
+2. **`sed -n '/class="result"/,/<\/div>/p'`** — de toda esa página, imprime **solo** las líneas
+   entre la que contiene `class="result"` y la que contiene `</div>`. El `-n` le dice a `sed`
+   "no imprimas nada por defecto", y el `…,…p` marca un **rango** ("desde esta línea hasta esta
+   otra, imprímelo"). Resultado: nos quedamos con el bloque del `Execution Result`, tirando el
+   resto de la página.
+3. **`sed 's/<[^>]*>//g'`** — borra las etiquetas HTML. `s/patrón//g` significa "reemplaza el
+   patrón por nada, todas las veces (`g`)". El patrón `<[^>]*>` es "un `<`, luego cualquier cosa
+   que no sea `>`, hasta el `>`" — es decir, **cualquier etiqueta** como `<p>` o `<h5>`. Deja
+   solo el texto limpio.
+
+> 💡 ¿Reconoces `[^>]` del regex del Paso 4? Es la misma idea que `[^/]`: "cualquier carácter
+> **excepto** este". Antes excluíamos `/`; aquí excluimos `>` para no comernos de más al borrar
+> una etiqueta.
+
+**En resumen:** `show '<payload>'` = *pide → recorta el resultado → limpia el HTML* → te imprime
+solo la salida del comando. Es comodidad, no parte del exploit: podrías hacer el mismo `curl` a
+mano cada vez, pero repetirlo 20 veces sería tedioso.
+
+</details>
 
 ### Paso 2 — Confirmar la ejecución de comandos
 
@@ -484,6 +848,35 @@ show 'http://%3Bcat%20flag%3B'
 Execution Result
 flag_3c462f978e95e26eb2a50235903f82e4a09c5ab95decfac4aec8c58e8fef7915
 ```
+
+<details>
+<summary>🔀 Un payload alternativo — no hay una sola forma correcta</summary>
+
+Nuestro payload deja que `ping` falle sin host (`http://;cat flag;` → `ping ;cat flag; -c 1`).
+Otra variante igual de válida hace que `ping` corra primero contra un host real y *luego*
+encadena el `cat`:
+
+```
+http://127.0.0.1 -c 0; cat flag;
+```
+
+El servidor arma `ping 127.0.0.1 -c 0; cat flag; -c 1`: primero un `ping` corto a `127.0.0.1`
+(el `-c 0` lo termina enseguida), después el `;` encadena `cat flag`. Con `curl`, URL-encodeando
+espacios y `;`:
+
+```bash
+show 'http://127.0.0.1%20-c%200%3B%20cat%20flag%3B'
+```
+
+Fíjate en un detalle clave: ese host inyectado —`127.0.0.1 -c 0; cat flag;`— contiene **espacios
+y `;`**, y aun así pasa el filtro. ¿Por qué? Porque el regex captura el host como `[^/]+`:
+prohíbe la `/`, pero **permite** espacios, `;`, `-`… todo lo demás. Por eso caben varios payloads
+distintos: la única regla es "sin `/`".
+
+**La lección:** en command injection rara vez hay un único payload correcto. Mientras respetes las
+restricciones (aquí: protocolo `http://` y nada de `/`), la forma de encadenar es tuya.
+
+</details>
 
 ## Flag
 

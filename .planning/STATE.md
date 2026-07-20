@@ -19,6 +19,7 @@ last_updated: "2026-06-09T02:15:25.093Z"
 | Fecha | Slug | Resultado |
 |-------|------|-----------|
 | 2026-07-20 | healthcheck-pedagogia-recon | Enriquecida pedagogía de Healthcheck (Intro + Paso 0 + Paso 1): sección Escenario/kill-chain, convención "Explica el comando", Paso 1 reescrito |
+| 2026-07-20 | healthcheck-pedagogia-explotacion | Enriquecida pedagogía de Healthcheck (Pasos 2–4 + Teoría + Explotación): desplegables curl/grep/form/regex/source-disclosure/show(), captura de navegador, ejemplos de command injection, payload alternativo, "flag" no "bandera" |
 
 ---
 
