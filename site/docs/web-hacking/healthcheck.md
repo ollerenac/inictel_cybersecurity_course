@@ -1,5 +1,6 @@
 ---
 id: healthcheck
+draft: true
 sidebar_position: 2
 title: "Healthcheck"
 tags: [avanzado, web-hacking, command-injection, rce, analisis-de-codigo]
