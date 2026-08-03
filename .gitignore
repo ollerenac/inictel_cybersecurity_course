@@ -10,3 +10,6 @@ soluciones/
 # Binarios de trabajo / material fuente que no debe ser público
 video/
 soluciones/malware/
+
+# Originales VPN sin redactar — nunca publicar
+images/vpn-fix-*
