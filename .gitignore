@@ -1,0 +1,12 @@
+# Artefactos internos de trabajo — NO publicar en el repo.
+# Copias locales se conservan; solo se dejan de trackear.
+.planning/
+docs/plans/
+continuation.md
+CLAUDE.md
+PROJECT.md
+soluciones/
+
+# Binarios de trabajo / material fuente que no debe ser público
+video/
+soluciones/malware/
