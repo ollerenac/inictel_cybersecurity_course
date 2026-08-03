@@ -14,6 +14,11 @@ const sidebars = {
       label: '🖥 Conexión al servidor',
     },
     {
+      type: 'doc',
+      id: 'vpn-fix',
+      label: '🔧 Arreglar la VPN',
+    },
+    {
       type: 'category',
       label: '🔐 Criptografía',
       items: [
