@@ -889,7 +889,7 @@ Cliente ─► PHP                           Cliente ─► Apache
 - La lección explica qué significa cada pregunta, pero no adelanta sus respuestas para la instancia
   CTF ni proporciona una secuencia para obtener la flag.
 
-## 11. Cuaderno de evidencia para la instancia autorizada
+## 11. Comprobaciones en la instancia CTF
 
 - El estudiante puede documentar la investigación con la siguiente tabla:
 
@@ -906,19 +906,3 @@ Cliente ─► PHP                           Cliente ─► Apache
 - Una hipótesis no confirmada debe conservarse como hipótesis; no debe transformarse en un hecho por
   parecer compatible con el enunciado.
 - La práctica se limita a la instancia sandbox asignada y a los mecanismos autorizados por el curso.
-
-## 12. Cierre: decisiones de cada capa y mitigaciones
-
-| Decisión observada | Capa responsable | Diseño más seguro |
-|---|---|---|
-| Validar solo un sufijo del nombre | Aplicación PHP | Combinar allowlist, límites, verificación del contenido y controles específicos del tipo esperado. |
-| Reutilizar el nombre declarado por el cliente | Aplicación PHP | Generar un identificador de servidor y conservar el nombre original solo como metadato. |
-| Guardar bajo contenido publicado | Aplicación y servidor web | Almacenar fuera del `DocumentRoot` o servir mediante una descarga controlada. |
-| Permitir cambios de configuración por directorio | Apache | Mantener `AllowOverride None` salvo una necesidad justificada y limitada. |
-| Mostrar el propio código de la aplicación | Aplicación PHP | Eliminar las funciones de depuración y no exponer archivos fuente. |
-
-- El CTF reúne decisiones de PHP y Apache en una misma ruta de análisis.
-- La resolución responsable consiste en probar cada relación con evidencia del sandbox, no en asumir
-  que una decisión de una capa determina automáticamente el comportamiento de la otra.
-- Con esta separación, el estudiante dispone de los conceptos necesarios para investigar el reto sin
-  que la lección entregue la solución ni la flag.
