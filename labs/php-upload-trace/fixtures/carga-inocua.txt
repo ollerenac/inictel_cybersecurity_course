@@ -1,0 +1,1 @@
+Contenido inocuo para trazar una carga de archivos en PHP.

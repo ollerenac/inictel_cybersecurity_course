@@ -1,0 +1,3 @@
+# Esta regla se ignora con AllowOverride None.
+# Tiene efecto solo con AllowOverride Indexes.
+DirectoryIndex portada.html

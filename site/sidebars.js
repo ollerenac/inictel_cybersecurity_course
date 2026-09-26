@@ -30,6 +30,7 @@ const sidebars = {
       label: '🌐 Web Hacking',
       items: [
         'web-hacking/my-webview',
+        'web-hacking/denylist',
       ],
     },
     {
